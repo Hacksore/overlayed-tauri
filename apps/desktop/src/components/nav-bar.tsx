@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import { usePlatformInfo } from "@/hooks/use-platform-info";
 import React, { useEffect } from "react";
-import Config, { type DirectionLR } from "../config";
+import { type DirectionLR } from "@/store";
 import { useAppStore } from "../store";
 import { useState } from "react";
 import { CHANNEL_TYPES } from "@/constants";
@@ -59,7 +59,8 @@ export const NavBar = ({
 }) => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { currentChannel } = useAppStore();
+  const store = useAppStore();
+  const currentChannel = store.currentChannel;
 
   const [channelName, setChannelName] = useState<string>();
   const [currentAlignment, setCurrentAlignment] = useState(mapping[alignDirection]);
@@ -123,7 +124,7 @@ export const NavBar = ({
                   const newAlignment = (currentAlignment + 1) % horizontalAlignments.length;
                   setCurrentAlignment(newAlignment);
                   setAlignDirection(horizontalAlignments[newAlignment]?.direction || "center");
-                  await Config.set("horizontal", horizontalAlignments[newAlignment]?.direction || "center");
+                  store.setSettingValue("horizontal", horizontalAlignments[newAlignment]?.direction || "center");
                 }}
               />
             </button>
@@ -132,9 +133,9 @@ export const NavBar = ({
                 size={20}
                 onClick={async () => {
                   await invoke("toggle_pin");
-                  await Config.set("pin", !pin);
+                  store.setSettingValue("pinned", !pin);
                   // track if it gets pinned
-                  track(Metric.Pin, 1);
+                  await track(Metric.Pin, 1);
                   navigate("/channel");
                 }}
               />

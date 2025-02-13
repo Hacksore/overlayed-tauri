@@ -1,19 +1,23 @@
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, useLocation } from "react-router-dom";
 import { MainView } from "./views/main";
 import { ChannelView } from "./views/channel";
 
 import { SettingsView } from "./views/settings";
 import { ErrorView } from "./views/error";
 import { NavBar } from "./components/nav-bar";
-import { usePin } from "./hooks/use-pin";
 import { useAlign } from "./hooks/use-align";
 import { useDisableWebFeatures } from "./hooks/use-disable-context-menu";
 import { useUpdate } from "./hooks/use-update";
 import { useAppStore } from "./store";
 import { Toaster } from "./components/ui/toaster";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useSocket } from "./rpc/manager";
 import { cn } from "./utils/tw";
+import { LazyStore } from "@tauri-apps/plugin-store";
+import { twMerge } from "tailwind-merge";
+import { useSettings } from "./hooks/use-settings";
+
+export const settings = new LazyStore("config.json");
 
 function App() {
   useDisableWebFeatures();
@@ -25,17 +29,19 @@ function App() {
   }, []);
 
   const { update } = useUpdate();
-  const { visible } = useAppStore();
+  const { visible, settings } = useAppStore();
 
-  const { pin } = usePin();
+  const pin = settings.pinned;
+
   const { horizontal, setHorizontalDirection } = useAlign();
   const visibleClass = visible ? "opacity-100" : "opacity-0";
+  const location = useLocation();
 
   return (
     <div
-      className={cn(
-        `text-white h-screen select-none rounded-lg ${visibleClass}`,
-        pin ? null : "border border-zinc-600"
+      className={twMerge(
+        cn("text-white h-screen select-none rounded-lg", visibleClass),
+        !pin && location.pathname === "/channel" ? "border border-accent" : ""
       )}
     >
       {!pin && (
@@ -57,4 +63,21 @@ function App() {
   );
 }
 
-export default App;
+function AppWrapper() {
+  const store = useAppStore();
+  const allSettings = useSettings();
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (!allSettings) return;
+    setIsLoading(true);
+    store.loadSettings(allSettings);
+    setIsLoading(false);
+  }, [allSettings]);
+
+  if (isLoading) <p>loading...</p>;
+
+  return <App />;
+}
+
+export default AppWrapper;
